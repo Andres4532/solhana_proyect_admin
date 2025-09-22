@@ -1,0 +1,64 @@
+const express = require('express');
+const { body } = require('express-validator');
+const { auth } = require('../middleware/auth');
+const ProductVariableController = require('../controllers/productVariableController');
+
+const router = express.Router();
+
+// Get all variables for a product
+router.get('/product/:productId', auth, ProductVariableController.getProductVariables);
+
+// Get single variable
+router.get('/:id', auth, ProductVariableController.getVariable);
+
+// Create new variable
+router.post('/product/:productId', auth, [
+  body('name').trim().isLength({ min: 1 }).withMessage('Variable name is required'),
+  body('type').optional().isIn(['radio', 'checkbox', 'quantity-selector', 'input', 'number']).withMessage('Invalid variable type'),
+  body('canMany').optional().isBoolean().withMessage('canMany must be a boolean'),
+  body('required').optional().isBoolean().withMessage('required must be a boolean'),
+  body('quantity').optional().isInt({ min: 1 }).withMessage('Quantity must be a positive integer'),
+  body('maxSelections').optional().isInt({ min: 1 }).withMessage('maxSelections must be a positive integer'),
+], ProductVariableController.createVariable);
+
+// Update variable
+router.put('/:id', auth, [
+  body('name').optional().trim().isLength({ min: 1 }).withMessage('Variable name is required'),
+  body('type').optional().isIn(['radio', 'checkbox', 'quantity-selector', 'input', 'number']).withMessage('Invalid variable type'),
+  body('canMany').optional().isBoolean().withMessage('canMany must be a boolean'),
+  body('required').optional().isBoolean().withMessage('required must be a boolean'),
+  body('quantity').optional().isInt({ min: 1 }).withMessage('Quantity must be a positive integer'),
+  body('maxSelections').optional().isInt({ min: 1 }).withMessage('maxSelections must be a positive integer'),
+], ProductVariableController.updateVariable);
+
+// Delete variable
+router.delete('/:id', auth, ProductVariableController.deleteVariable);
+
+// Toggle variable status
+router.put('/:id/toggle-status', auth, ProductVariableController.toggleVariableStatus);
+
+// Validate user selections for a variable
+router.post('/:id/validate-selections', auth, [
+  body('selectedOptions').isArray().withMessage('selectedOptions must be an array'),
+  body('selectedOptions.*').isMongoId().withMessage('Each selected option must be a valid ObjectId'),
+], ProductVariableController.validateSelections);
+
+// Add pricing option to variable
+router.post('/:id/options', auth, [
+  body('name').trim().isLength({ min: 1 }).withMessage('Option name is required'),
+  body('price').isFloat({ min: 0 }).withMessage('Valid price is required'),
+  body('description').optional().trim(),
+], ProductVariableController.addPricingOption);
+
+// Update pricing option
+router.put('/options/:optionId', auth, [
+  body('name').optional().trim().isLength({ min: 1 }).withMessage('Option name is required'),
+  body('price').optional().isFloat({ min: 0 }).withMessage('Valid price is required'),
+  body('description').optional().trim(),
+  body('active').optional().isBoolean().withMessage('active must be a boolean'),
+], ProductVariableController.updatePricingOption);
+
+// Delete pricing option
+router.delete('/options/:optionId', auth, ProductVariableController.deletePricingOption);
+
+module.exports = router;

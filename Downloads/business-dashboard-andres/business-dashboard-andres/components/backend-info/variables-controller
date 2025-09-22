@@ -1,0 +1,786 @@
+const { validationResult } = require('express-validator');
+const ProductVariable = require('../models/ProductVariable');
+const PricingPV = require('../models/PricingPV');
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     ProductVariable:
+ *       type: object
+ *       required:
+ *         - name
+ *         - productsId
+ *       properties:
+ *         name:
+ *           type: string
+ *           description: Nombre de la variable
+ *         type:
+ *           type: string
+ *           enum: [radio, checkbox, quantity-selector, input, number]
+ *           description: Tipo de variable
+ *         canMany:
+ *           type: boolean
+ *           default: false
+ *           description: Si permite múltiples selecciones
+ *         required:
+ *           type: boolean
+ *           default: false
+ *           description: Si es obligatorio
+ *         instructions:
+ *           type: string
+ *           description: Instrucciones para la variable
+ *         productsId:
+ *           type: string
+ *           format: objectId
+ *           description: ID del producto asociado
+ *         quantity:
+ *           type: number
+ *           default: 1
+ *           description: Cantidad por defecto
+ *         maxSelections:
+ *           type: number
+ *           default: 1
+ *           minimum: 1
+ *           description: Máximo número de opciones que puede seleccionar el usuario
+ *         status:
+ *           type: number
+ *           enum: [0, 1]
+ *           default: 1
+ *           description: Estado de la variable
+ */
+
+class ProductVariableController {
+  /**
+   * @swagger
+   * /api/product-variables/product/{productId}:
+   *   get:
+   *     summary: Obtener todas las variables de un producto
+   *     tags: [Product Variables]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: productId
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: objectId
+   *     responses:
+   *       200:
+   *         description: Variables obtenidas exitosamente
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/ProductVariable'
+   */
+  static async getProductVariables(req, res) {
+    try {
+      const { productId } = req.params;
+      
+      const variables = await ProductVariable.find({ 
+        productsId: productId,
+        status: 1 
+      }).populate('options');
+      
+      res.json({
+        success: true,
+        data: variables
+      });
+    } catch (error) {
+      console.error('Error getting product variables:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error interno del servidor',
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * @swagger
+   * /api/product-variables/{id}:
+   *   get:
+   *     summary: Obtener una variable específica
+   *     tags: [Product Variables]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: objectId
+   *     responses:
+   *       200:
+   *         description: Variable obtenida exitosamente
+   */
+  static async getVariable(req, res) {
+    try {
+      const { id } = req.params;
+      
+      const variable = await ProductVariable.findById(id).populate('options');
+      
+      if (!variable) {
+        return res.status(404).json({
+          success: false,
+          message: 'Variable no encontrada'
+        });
+      }
+      
+      res.json({
+        success: true,
+        data: variable
+      });
+    } catch (error) {
+      console.error('Error getting variable:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error interno del servidor',
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * @swagger
+   * /api/product-variables/product/{productId}:
+   *   post:
+   *     summary: Crear una nueva variable para un producto
+   *     tags: [Product Variables]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: productId
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: objectId
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/ProductVariable'
+   *     responses:
+   *       201:
+   *         description: Variable creada exitosamente
+   */
+  static async createVariable(req, res) {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Datos de entrada inválidos',
+          errors: errors.array()
+        });
+      }
+
+      const { productId } = req.params;
+      const { name, type, canMany, required, instructions, quantity, maxSelections } = req.body;
+
+      // Verificar si ya existe una variable con el mismo nombre para este producto
+      const existingVariable = await ProductVariable.findOne({
+        productsId: productId,
+        name: name
+      });
+
+      if (existingVariable) {
+        return res.status(400).json({
+          success: false,
+          message: 'Ya existe una variable con este nombre para este producto'
+        });
+      }
+
+      // Validar maxSelections según el tipo
+      let validatedMaxSelections = maxSelections || 1;
+      
+      if (type === 'checkbox' || type === 'quantity-selector') {
+        // Para tipos checkbox/quantity-selector, maxSelections debe ser mayor a 0
+        if (!maxSelections || maxSelections <= 0) {
+          return res.status(400).json({
+            success: false,
+            message: 'Para tipos checkbox/quantity-selector, maxSelections debe ser mayor a 0'
+          });
+        }
+      } else {
+        // Para otros tipos, maxSelections siempre debe ser 1
+        validatedMaxSelections = 1;
+      }
+
+      const variable = new ProductVariable({
+        name,
+        type: type || 'radio',
+        canMany: canMany || false,
+        required: required || false,
+        instructions: instructions || '',
+        productsId: productId,
+        quantity: quantity || 1,
+        maxSelections: validatedMaxSelections,
+        status: 1
+      });
+
+      await variable.save();
+
+      res.status(201).json({
+        success: true,
+        message: 'Variable creada exitosamente',
+        data: variable
+      });
+    } catch (error) {
+      console.error('Error creating variable:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error interno del servidor',
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * @swagger
+   * /api/product-variables/{id}:
+   *   put:
+   *     summary: Actualizar una variable existente
+   *     tags: [Product Variables]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: objectId
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/ProductVariable'
+   *     responses:
+   *       200:
+   *         description: Variable actualizada exitosamente
+   */
+  static async updateVariable(req, res) {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Datos de entrada inválidos',
+          errors: errors.array()
+        });
+      }
+
+      const { id } = req.params;
+      const updateData = req.body;
+      
+      // Obtener la variable primero
+      const variable = await ProductVariable.findById(id);
+      
+      if (!variable) {
+        return res.status(404).json({
+          success: false,
+          message: 'Variable no encontrada'
+        });
+      }
+
+      // Si se está cambiando el nombre, verificar que no exista duplicado
+      if (updateData.name && updateData.name !== variable.name) {
+        const existingVariable = await ProductVariable.findOne({
+          productsId: variable.productsId,
+          name: updateData.name,
+          _id: { $ne: id }
+        });
+
+        if (existingVariable) {
+          return res.status(400).json({
+            success: false,
+            message: 'Ya existe una variable con este nombre para este producto'
+          });
+        }
+      }
+
+      const updatedVariable = await ProductVariable.findByIdAndUpdate(
+        id,
+        updateData,
+        { new: true, runValidators: true }
+      );
+
+      res.json({
+        success: true,
+        message: 'Variable actualizada exitosamente',
+        data: updatedVariable
+      });
+    } catch (error) {
+      console.error('Error updating variable:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error interno del servidor',
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * @swagger
+   * /api/product-variables/{id}:
+   *   delete:
+   *     summary: Eliminar una variable
+   *     tags: [Product Variables]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: objectId
+   *     responses:
+   *       200:
+   *         description: Variable eliminada exitosamente
+   */
+  static async deleteVariable(req, res) {
+    try {
+      const { id } = req.params;
+
+      const variable = await ProductVariable.findById(id);
+      
+      if (!variable) {
+        return res.status(404).json({
+          success: false,
+          message: 'Variable no encontrada'
+        });
+      }
+
+      // Eliminar todas las opciones de precios asociadas
+      if (variable.options && variable.options.length > 0) {
+        await PricingPV.deleteMany({ _id: { $in: variable.options } });
+      }
+
+      await ProductVariable.findByIdAndDelete(id);
+
+      res.json({
+        success: true,
+        message: 'Variable eliminada exitosamente'
+      });
+    } catch (error) {
+      console.error('Error deleting variable:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error interno del servidor',
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * @swagger
+   * /api/product-variables/{id}/options:
+   *   post:
+   *     summary: Agregar una opción de precio a una variable
+   *     tags: [Product Variables]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: objectId
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - name
+   *               - price
+   *             properties:
+   *               name:
+   *                 type: string
+   *               price:
+   *                 type: number
+   *               description:
+   *                 type: string
+   *     responses:
+   *       201:
+   *         description: Opción agregada exitosamente
+   */
+  static async addPricingOption(req, res) {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Datos de entrada inválidos',
+          errors: errors.array()
+        });
+      }
+
+      const { id } = req.params;
+      const { name, price, description } = req.body;
+
+      const variable = await ProductVariable.findById(id);
+      
+      if (!variable) {
+        return res.status(404).json({
+          success: false,
+          message: 'Variable no encontrada'
+        });
+      }
+
+      // Crear la nueva opción de precio
+      const pricingOption = new PricingPV({
+        name,
+        basePrice: price, // Mapear price a basePrice
+        description: description || '',
+        active: true
+      });
+
+      await pricingOption.save();
+
+      // Agregar la opción a la variable
+      variable.options.push(pricingOption._id);
+      await variable.save();
+
+      res.status(201).json({
+        success: true,
+        message: 'Opción agregada exitosamente',
+        data: pricingOption
+      });
+    } catch (error) {
+      console.error('Error adding pricing option:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error interno del servidor',
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * @swagger
+   * /api/product-variables/options/{optionId}:
+   *   put:
+   *     summary: Actualizar una opción de precio
+   *     tags: [Product Variables]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: optionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: objectId
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               name:
+   *                 type: string
+   *               price:
+   *                 type: number
+   *               description:
+   *                 type: string
+   *               active:
+   *                 type: boolean
+   *     responses:
+   *       200:
+   *         description: Opción actualizada exitosamente
+   */
+  static async updatePricingOption(req, res) {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Datos de entrada inválidos',
+          errors: errors.array()
+        });
+      }
+
+      const { optionId } = req.params;
+      const updateData = req.body;
+      
+      // Mapear price a basePrice si viene en el body
+      if (updateData.price !== undefined) {
+        updateData.basePrice = updateData.price;
+        delete updateData.price;
+      }
+
+      const pricingOption = await PricingPV.findById(optionId);
+      
+      if (!pricingOption) {
+        return res.status(404).json({
+          success: false,
+          message: 'Opción de precio no encontrada'
+        });
+      }
+
+      const updatedOption = await PricingPV.findByIdAndUpdate(
+        optionId,
+        updateData,
+        { new: true, runValidators: true }
+      );
+
+      res.json({
+        success: true,
+        message: 'Opción actualizada exitosamente',
+        data: updatedOption
+      });
+    } catch (error) {
+      console.error('Error updating pricing option:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error interno del servidor',
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * @swagger
+   * /api/product-variables/options/{optionId}:
+   *   delete:
+   *     summary: Eliminar una opción de precio
+   *     tags: [Product Variables]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: optionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: objectId
+   *     responses:
+   *       200:
+   *         description: Opción eliminada exitosamente
+   */
+  static async deletePricingOption(req, res) {
+    try {
+      const { optionId } = req.params;
+
+      const pricingOption = await PricingPV.findById(optionId);
+      
+      if (!pricingOption) {
+        return res.status(404).json({
+          success: false,
+          message: 'Opción de precio no encontrada'
+        });
+      }
+
+      // Remover la opción de todas las variables que la referencien
+      await ProductVariable.updateMany(
+        { options: optionId },
+        { $pull: { options: optionId } }
+      );
+
+      await PricingPV.findByIdAndDelete(optionId);
+
+      res.json({
+        success: true,
+        message: 'Opción eliminada exitosamente'
+      });
+    } catch (error) {
+      console.error('Error deleting pricing option:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error interno del servidor',
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * @swagger
+   * /api/product-variables/{id}/toggle-status:
+   *   put:
+   *     summary: Cambiar el estado de una variable
+   *     tags: [Product Variables]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: objectId
+   *     responses:
+   *       200:
+   *         description: Estado cambiado exitosamente
+   */
+  static async toggleVariableStatus(req, res) {
+    try {
+      const { id } = req.params;
+
+      const variable = await ProductVariable.findById(id);
+      
+      if (!variable) {
+        return res.status(404).json({
+          success: false,
+          message: 'Variable no encontrada'
+        });
+      }
+
+      variable.status = variable.status === 1 ? 0 : 1;
+      await variable.save();
+
+      res.json({
+        success: true,
+        message: `Variable ${variable.status === 1 ? 'activada' : 'desactivada'} exitosamente`,
+        data: variable
+      });
+    } catch (error) {
+      console.error('Error toggling variable status:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error interno del servidor',
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * @swagger
+   * /api/product-variables/{id}/validate-selections:
+   *   post:
+   *     summary: Validar las selecciones del usuario para una variable
+   *     tags: [Product Variables]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: objectId
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - selectedOptions
+   *             properties:
+   *               selectedOptions:
+   *                 type: array
+   *                 items:
+   *                   type: string
+   *                 description: Array de IDs de opciones seleccionadas
+   *     responses:
+   *       200:
+   *         description: Validación exitosa
+   *       400:
+   *         description: Validación fallida
+   */
+  static async validateSelections(req, res) {
+    try {
+      const { id } = req.params;
+      const { selectedOptions } = req.body;
+
+      if (!selectedOptions || !Array.isArray(selectedOptions)) {
+        return res.status(400).json({
+          success: false,
+          message: 'selectedOptions debe ser un array'
+        });
+      }
+
+      const variable = await ProductVariable.findById(id).populate('options');
+      
+      if (!variable) {
+        return res.status(404).json({
+          success: false,
+          message: 'Variable no encontrada'
+        });
+      }
+
+      // Validar que todas las opciones seleccionadas existan
+      const validOptionIds = variable.options.map(option => option._id.toString());
+      const invalidOptions = selectedOptions.filter(optionId => !validOptionIds.includes(optionId));
+      
+      if (invalidOptions.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Algunas opciones seleccionadas no son válidas',
+          invalidOptions
+        });
+      }
+
+      // Validar cantidad de selecciones según maxSelections
+      if (selectedOptions.length > variable.maxSelections) {
+        return res.status(400).json({
+          success: false,
+          message: `Solo puedes seleccionar máximo ${variable.maxSelections} opciones`,
+          maxSelections: variable.maxSelections,
+          selectedCount: selectedOptions.length
+        });
+      }
+
+      // Validar que si es requerido, al menos se seleccione una opción
+      if (variable.required && selectedOptions.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Esta variable es requerida, debes seleccionar al menos una opción'
+        });
+      }
+
+      // Validar que si canMany es false, solo se seleccione una opción
+      if (!variable.canMany && selectedOptions.length > 1) {
+        return res.status(400).json({
+          success: false,
+          message: 'Esta variable solo permite una selección'
+        });
+      }
+
+      res.json({
+        success: true,
+        message: 'Selecciones válidas',
+        data: {
+          variable: {
+            id: variable._id,
+            name: variable.name,
+            type: variable.type,
+            canMany: variable.canMany,
+            required: variable.required,
+            maxSelections: variable.maxSelections
+          },
+          selectedOptions: selectedOptions.length,
+          maxSelections: variable.maxSelections,
+          isValid: true
+        }
+      });
+    } catch (error) {
+      console.error('Error validating selections:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error interno del servidor',
+        error: error.message
+      });
+    }
+  }
+}
+
+module.exports = ProductVariableController;

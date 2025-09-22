@@ -1,0 +1,81 @@
+const mongoose = require('mongoose');
+
+const productSchema = new mongoose.Schema({
+  productCode: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  name: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  description: {
+    type: String,
+    default: ''
+  },
+  url: {
+    type: String,
+    required: false,
+    default: null
+  },
+  status: {
+    type: Number,
+    enum: [0, 1], // 0 = inactive, 1 = active
+    default: 1
+  },
+  visibleItem: {
+    type: Boolean,
+    default: true
+  },
+  pricing: {
+    type: Number,
+    required: true,
+    min: 0
+  },
+  hasVariables: {
+    type: Boolean,
+    default: false
+  },
+  maxQuantity: {
+    type: Number,
+    default: 20,
+    min: 1
+  },
+  categoryProductId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'CategoryProduct',
+    required: true
+  },
+  companyId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Company',
+    required: true
+  },
+  branchId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Branch',
+    default: null
+  },
+  identifier: {
+    type: String,
+    unique: true
+  },
+  variables: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'ProductVariable'
+  }]
+}, {
+  timestamps: true,
+  collection: 'products'
+});
+
+// Indexes
+productSchema.index({ name: 'text', description: 'text' });
+productSchema.index({ status: 1 });
+productSchema.index({ categoryProductId: 1 });
+productSchema.index({ visibleItem: 1 });
+productSchema.index({ companyId: 1 });
+
+module.exports = mongoose.model('Product', productSchema); 

@@ -1,0 +1,55 @@
+const express = require('express');
+const { body } = require('express-validator');
+const { auth } = require('../middleware/auth');
+const { uploadSingle, handleUploadError } = require('../middleware/upload');
+const ProductController = require('../controllers/productController');
+
+const router = express.Router();
+
+// Get all products for a company
+router.get('/', auth, ProductController.getAllProducts);
+
+// Get single product
+router.get('/:id', auth, ProductController.getProduct);
+
+// Create new product
+router.post('/', auth, [
+  body('name').trim().isLength({ min: 1 }).withMessage('Product name is required'),
+  body('pricing').isFloat({ min: 0 }).withMessage('Valid price is required'),
+  body('categoryProductId').isMongoId().withMessage('Valid category is required'),
+  body('branchId').optional().isMongoId().withMessage('Invalid branch ID format'),
+  body('url').optional().custom((value) => {
+    if (!value) return true; // Permitir valores vacíos
+    // Si es una URL válida o base64, está bien
+    if (value.startsWith('http') || value.startsWith('data:image')) {
+      return true;
+    }
+    throw new Error('Invalid image format. Must be a valid URL or base64 image');
+  }),
+], ProductController.createProduct);
+
+// ✅ CORREGIDO: Update product - Permitir cadenas vacías y valores 0
+router.put('/:id', auth, [
+  body('name').optional().trim(), // ✅ Permitir nombres vacíos
+  body('pricing').optional().isFloat({ min: 0 }), // ✅ Permitir precio 0
+  body('description').optional().trim(), // ✅ Permitir descripciones vacías
+  body('categoryProductId').optional().isMongoId().withMessage('Invalid category ID format'),
+  body('visibleItem').optional().isBoolean().withMessage('Visible item must be boolean'),
+  body('status').optional().isInt({ min: 0, max: 1 }).withMessage('Status must be 0 or 1'),
+  body('url').optional().custom((value) => {
+    if (!value) return true; // Permitir valores vacíos
+    // Si es una URL válida o base64, está bien
+    if (value.startsWith('http') || value.startsWith('data:image')) {
+      return true;
+    }
+    throw new Error('Invalid image format. Must be a valid URL or base64 image');
+  }),
+], ProductController.updateProduct);
+
+// Delete product
+router.delete('/:id', auth, ProductController.deleteProduct);
+
+// Get product categories
+router.get('/categories/all', auth, ProductController.getCategories);
+
+module.exports = router;

@@ -1,0 +1,441 @@
+const { validationResult } = require('express-validator');
+const CategoryProduct = require('../models/CategoryProduct');
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     CategoryProduct:
+ *       type: object
+ *       required:
+ *         - categoryName
+ *         - categoryCode
+ *       properties:
+ *         categoryName:
+ *           type: string
+ *           description: Nombre de la categoría
+ *         categoryCode:
+ *           type: string
+ *           description: Código único de la categoría
+ *         description:
+ *           type: string
+ *           description: Descripción de la categoría
+ *         waitingTime:
+ *           type: string
+ *           default: '30'
+ *           description: Tiempo de espera en minutos
+ *         status:
+ *           type: number
+ *           enum: [0, 1]
+ *           default: 1
+ *           description: Estado de la categoría (0=inactiva, 1=activa)
+ *         url:
+ *           type: string
+ *           description: URL de imagen de la categoría
+ *         branchId:
+ *           type: string
+ *           description: ID de la sucursal asociada
+ */
+
+class CategoryController {
+  /**
+   * @swagger
+   * /categories:
+   *   get:
+   *     summary: Obtener todas las categorías de la empresa
+   *     tags: [Categories]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Lista de categorías
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: array
+   *               items:
+   *                 $ref: '#/components/schemas/CategoryProduct'
+   *       401:
+   *         description: No autorizado
+   *       500:
+   *         description: Error del servidor
+   */
+  // Get all categories for a company
+  static async getAllCategories(req, res) {
+    try {
+      const categories = await CategoryProduct.find({ companyID: req.company._id })
+        .sort({ categoryName: 1 });
+      
+      res.json(categories);
+    } catch (error) {
+      console.error('Get categories error:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  }
+
+  /**
+   * @swagger
+   * /categories/{id}:
+   *   get:
+   *     summary: Obtener una categoría específica
+   *     tags: [Categories]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: ID de la categoría
+   *     responses:
+   *       200:
+   *         description: Categoría encontrada
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/CategoryProduct'
+   *       404:
+   *         description: Categoría no encontrada
+   *       401:
+   *         description: No autorizado
+   *       500:
+   *         description: Error del servidor
+   */
+  // Get category by ID
+  static async getCategoryById(req, res) {
+    try {
+      const category = await CategoryProduct.findOne({
+        _id: req.params.id,
+        companyID: req.company._id
+      });
+      
+      if (!category) {
+        return res.status(404).json({ message: 'Category not found' });
+      }
+      
+      res.json(category);
+    } catch (error) {
+      console.error('Get category by ID error:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  }
+
+  /**
+   * @swagger
+   * /categories:
+   *   post:
+   *     summary: Crear una nueva categoría
+   *     tags: [Categories]
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+    *             required:
+ *               - categoryName
+ *             properties:
+ *               categoryName:
+ *                 type: string
+   *               description:
+   *                 type: string
+   *               waitingTime:
+   *                 type: string
+   *               branchId:
+   *                 type: string
+   *     responses:
+   *       201:
+   *         description: Categoría creada exitosamente
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                 category:
+   *                   $ref: '#/components/schemas/CategoryProduct'
+   *       400:
+   *         description: Datos inválidos
+   *       401:
+   *         description: No autorizado
+   *       500:
+   *         description: Error del servidor
+   */
+  // Create new category
+  static async createCategory(req, res) {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+      
+      const { categoryName, description, waitingTime, branchId } = req.body;
+      
+      // Validate branch exists and belongs to company
+      if (branchId) {
+        const Branch = require('../models/Branch');
+        const branch = await Branch.findOne({
+          _id: branchId,
+          companyID: req.company._id
+        });
+        
+        if (!branch) {
+          return res.status(400).json({ message: 'Invalid branch ID' });
+        }
+      }
+      
+      // Generate automatic category code
+      const generateCategoryCode = (name) => {
+        // Take first 3-4 characters of category name, remove spaces and special chars
+        let code = name.replace(/[^a-zA-Z0-9]/g, '').substring(0, 4).toUpperCase();
+        
+        // If code is too short, pad with numbers
+        if (code.length < 3) {
+          code = code + '001';
+        }
+        
+        return code;
+      };
+      
+      let categoryCode = generateCategoryCode(categoryName);
+      let counter = 1;
+      
+      // Check if category code already exists and generate unique one
+      while (true) {
+        const existingCategory = await CategoryProduct.findOne({
+          categoryCode,
+          companyID: req.company._id
+        });
+        
+        if (!existingCategory) {
+          break; // Code is unique
+        }
+        
+        // Generate new code with counter
+        const baseCode = generateCategoryCode(categoryName);
+        categoryCode = baseCode + counter.toString().padStart(2, '0');
+        counter++;
+        
+        // Prevent infinite loop
+        if (counter > 99) {
+          categoryCode = baseCode + Date.now().toString().slice(-3);
+          break;
+        }
+      }
+      
+      console.log('📝 Backend: Código de categoría generado:', categoryCode);
+      
+      const category = new CategoryProduct({
+        categoryName,
+        categoryCode,
+        description,
+        waitingTime: waitingTime || '30',
+        status: 1, // Default to active
+        companyID: req.company._id,
+        branchId
+      });
+      
+      await category.save();
+      
+      res.status(201).json({
+        message: 'Category created successfully',
+        category
+      });
+    } catch (error) {
+      console.error('Create category error:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  }
+
+  /**
+   * @swagger
+   * /categories/{id}:
+   *   put:
+   *     summary: Actualizar una categoría
+   *     tags: [Categories]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: ID de la categoría
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               categoryName:
+   *                 type: string
+   *               categoryCode:
+   *                 type: string
+   *               description:
+   *                 type: string
+   *               waitingTime:
+   *                 type: string
+   *               status:
+   *                 type: number
+   *                 enum: [0, 1]
+   *               branchId:
+   *                 type: string
+   *     responses:
+   *       200:
+   *         description: Categoría actualizada exitosamente
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                 category:
+   *                   $ref: '#/components/schemas/CategoryProduct'
+   *       400:
+   *         description: Datos inválidos
+   *       401:
+   *         description: No autorizado
+   *       404:
+   *         description: Categoría no encontrada
+   *       500:
+   *         description: Error del servidor
+   */
+  // Update category
+  static async updateCategory(req, res) {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+      
+      const category = await CategoryProduct.findOne({
+        _id: req.params.id,
+        companyID: req.company._id
+      });
+      
+      if (!category) {
+        return res.status(404).json({ message: 'Category not found' });
+      }
+      
+      const { categoryName, categoryCode, description, waitingTime, status, branchId } = req.body;
+      const updateData = {};
+      
+      // Validate branch exists and belongs to company
+      if (branchId) {
+        const Branch = require('../models/Branch');
+        const branch = await Branch.findOne({
+          _id: branchId,
+          companyID: req.company._id
+        });
+        
+        if (!branch) {
+          return res.status(400).json({ message: 'Invalid branch ID' });
+        }
+        updateData.branchId = branchId;
+      }
+      
+      // Validate status if provided
+      if (status !== undefined) {
+        if (![0, 1].includes(status)) {
+          return res.status(400).json({ message: 'Status must be 0 or 1' });
+        }
+        updateData.status = status;
+      }
+      
+      if (categoryName) updateData.categoryName = categoryName;
+      if (categoryCode) updateData.categoryCode = categoryCode;
+      if (description !== undefined) updateData.description = description;
+      if (waitingTime !== undefined) updateData.waitingTime = waitingTime;
+      
+      const updatedCategory = await CategoryProduct.findByIdAndUpdate(
+        req.params.id,
+        updateData,
+        { new: true, runValidators: true }
+      );
+      
+      res.json({
+        message: 'Category updated successfully',
+        category: updatedCategory
+      });
+    } catch (error) {
+      console.error('Update category error:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  }
+
+  /**
+   * @swagger
+   * /categories/{id}:
+   *   delete:
+   *     summary: Eliminar una categoría
+   *     tags: [Categories]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: ID de la categoría
+   *     responses:
+   *       200:
+   *         description: Categoría eliminada exitosamente
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *       400:
+   *         description: No se puede eliminar categoría con productos asociados
+   *       401:
+   *         description: No autorizado
+   *       404:
+   *         description: Categoría no encontrada
+   *       500:
+   *         description: Error del servidor
+   */
+  // Delete category
+  static async deleteCategory(req, res) {
+    try {
+      const category = await CategoryProduct.findOne({
+        _id: req.params.id,
+        companyID: req.company._id
+      });
+      
+      if (!category) {
+        return res.status(404).json({ message: 'Category not found' });
+      }
+      
+      // Check if category has products
+      const Product = require('../models/Product');
+      const productsCount = await Product.countDocuments({
+        categoryProductId: req.params.id
+      });
+      
+      if (productsCount > 0) {
+        return res.status(400).json({ 
+          message: `Cannot delete category. It has ${productsCount} associated products.` 
+        });
+      }
+      
+      await CategoryProduct.findByIdAndDelete(req.params.id);
+      
+      res.json({ message: 'Category deleted successfully' });
+    } catch (error) {
+      console.error('Delete category error:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  }
+}
+
+module.exports = CategoryController;

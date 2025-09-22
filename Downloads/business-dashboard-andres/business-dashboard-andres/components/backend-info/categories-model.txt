@@ -1,0 +1,45 @@
+const mongoose = require("mongoose");
+
+const categoryProductSchema = new mongoose.Schema(
+  {
+    categoryName: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    categoryCode: {
+      type: String,
+      required: true,
+      unique: true
+    },
+    description: {
+      type: String,
+      default: ""
+    },
+    waitingTime: {
+      type: String,
+      default: "30"
+    },
+    status: {
+      type: Number,
+      enum: [0, 1], // 0 = inactive, 1 = active
+      default: 1
+    },
+    url: {
+      type: String,
+      default: null
+    },
+    companyID: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Company",
+      required: true
+    }
+  },
+  {
+    timestamps: true,
+    collection: "categoryProducts"
+  }
+);
+
+// Exporta el modelo
+module.exports = mongoose.model("CategoryProduct", categoryProductSchema);

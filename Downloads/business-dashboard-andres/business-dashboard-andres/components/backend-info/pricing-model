@@ -1,0 +1,30 @@
+const mongoose = require('mongoose');
+
+const pricingPVSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  basePrice: {
+    type: Number,
+    required: true,
+    min: 0,
+    default: 0
+  },
+  pv: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'ProductVariable',
+    required: true
+  }
+}, {
+  timestamps: true,
+  collection: 'pricingPV'
+});
+
+// Indexes
+pricingPVSchema.index({ name: 'text' });
+pricingPVSchema.index({ basePrice: 1 });
+pricingPVSchema.index({ pv: 1 });
+
+module.exports = mongoose.model('PricingPV', pricingPVSchema);

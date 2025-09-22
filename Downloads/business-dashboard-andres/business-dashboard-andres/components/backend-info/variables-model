@@ -1,0 +1,62 @@
+const mongoose = require('mongoose');
+
+const productVariableSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  canMany: {
+    type: Boolean,
+    default: false
+  },
+  required: {
+    type: Boolean,
+    default: false
+  },
+  instructions: {
+    type: String,
+    default: ''
+  },
+  productsId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Product',
+    required: true
+  },
+  quantity: {
+    type: Number,
+    default: 1,
+    min: 1
+  },
+  options: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'PricingPV'
+  }],
+  status: {
+    type: Number,
+    default: 1,
+    enum: [0, 1] // 0: inactivo, 1: activo
+  }
+}, {
+  timestamps: true,
+  collection: 'productVariables'
+});
+
+// Middleware pre-save para validaciones adicionales
+productVariableSchema.pre('save', function(next) {
+  // Validaciones básicas
+  next();
+});
+
+// Middleware pre-update para validaciones en actualizaciones
+productVariableSchema.pre(['updateOne', 'findOneAndUpdate'], function(next) {
+  // Validaciones básicas
+  next();
+});
+
+// Indexes
+productVariableSchema.index({ productsId: 1 });
+productVariableSchema.index({ name: 'text' });
+productVariableSchema.index({ status: 1 });
+
+module.exports = mongoose.model('ProductVariable', productVariableSchema);

@@ -1,0 +1,925 @@
+const { validationResult } = require('express-validator');
+const Product = require('../models/Product');
+const CategoryProduct = require('../models/CategoryProduct');
+const ProductVariable = require('../models/ProductVariable');
+const PricingPV = require('../models/PricingPV');
+const { uploadFile, isMinioConfigured, minioClient } = require('../config/minio');
+
+// Función para eliminar imagen de MinIO
+const deleteImageFromMinIO = async (imageUrl) => {
+  if (!isMinioConfigured || !imageUrl) {
+    return;
+  }
+
+  try {
+    // Extraer el nombre del archivo de la URL
+    const urlParts = imageUrl.split('/');
+    const fileName = urlParts[urlParts.length - 1];
+    
+    console.log('🗑️ Eliminando imagen de MinIO:', fileName);
+    
+    await minioClient.removeObject('santiago-company', fileName);
+    console.log('✅ Imagen eliminada de MinIO:', fileName);
+  } catch (error) {
+    console.error('❌ Error eliminando imagen de MinIO:', error);
+  }
+};
+
+// Función para procesar imagen base64 y subirla a MinIO
+const processBase64Image = async (base64String, productId) => {
+  console.log('🔧 processBase64Image: Iniciando...');
+  console.log('🔧 processBase64Image: MinIO configurado:', isMinioConfigured);
+  console.log('🔧 processBase64Image: Product ID:', productId);
+  console.log('🔧 processBase64Image: Base64 length:', base64String.length);
+  
+  if (!isMinioConfigured) {
+    console.log('❌ MinIO not configured. Keeping base64 image.');
+    return base64String;
+  }
+
+  try {
+    // Extraer el tipo MIME y los datos base64
+    const matches = base64String.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) {
+      throw new Error('Invalid base64 image format');
+    }
+
+    const mimeType = matches[1];
+    const base64Data = matches[2];
+    
+    console.log('🔧 processBase64Image: MIME type:', mimeType);
+    console.log('🔧 processBase64Image: Base64 data length:', base64Data.length);
+    
+    // Convertir base64 a buffer
+    const buffer = Buffer.from(base64Data, 'base64');
+    console.log('🔧 processBase64Image: Buffer size:', buffer.length);
+    
+    // Generar nombre de archivo único (sin carpeta)
+    const fileExtension = mimeType.split('/')[1] || 'jpg';
+    const fileName = `${productId}-${Date.now()}.${fileExtension}`;
+    console.log('🔧 processBase64Image: File name:', fileName);
+    console.log('🔧 processBase64Image: Bucket name: santiago-company');
+    console.log('🔧 processBase64Image: MinIO endpoint:', process.env.MINIO_ENDPOINT);
+    console.log('🔧 processBase64Image: MinIO port:', process.env.MINIO_PORT);
+    console.log('🔧 processBase64Image: MinIO SSL:', process.env.MINIO_USE_SSL);
+    
+    // Subir a MinIO en el bucket santiago-company (directamente, sin carpeta)
+    console.log('🔧 processBase64Image: Subiendo a MinIO...');
+    await minioClient.putObject(
+      'santiago-company',
+      fileName,
+      buffer,
+      buffer.length,
+      { 'Content-Type': mimeType }
+    );
+    
+    // Generar URL de acceso
+    const protocol = process.env.MINIO_USE_SSL === 'true' ? 'https' : 'http';
+    const fileUrl = `${protocol}://${process.env.MINIO_ENDPOINT}:${process.env.MINIO_PORT}/santiago-company/${fileName}`;
+    
+    console.log('✅ Imagen subida a MinIO:', fileUrl);
+    return fileUrl;
+    
+  } catch (error) {
+    console.error('❌ Error processing base64 image:', error);
+    console.error('❌ Error stack:', error.stack);
+    // Si falla, mantener la imagen base64
+    return base64String;
+  }
+};
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     Product:
+ *       type: object
+ *       required:
+ *         - name
+ *         - pricing
+ *         - categoryProductId
+ *       properties:
+ *         name:
+ *           type: string
+ *           description: Nombre del producto
+ *         description:
+ *           type: string
+ *           description: Descripción del producto
+ *         pricing:
+ *           type: number
+ *           minimum: 0
+ *           description: Precio del producto
+ *         categoryProductId:
+ *           type: string
+ *           description: ID de la categoría del producto
+ *         status:
+ *           type: number
+ *           enum: [0, 1]
+ *           default: 1
+ *           description: Estado del producto (0=inactivo, 1=activo)
+ *         visibleItem:
+ *           type: boolean
+ *           default: true
+ *           description: Si el producto es visible
+ *         branchId:
+ *           type: string
+ *           description: ID de la sucursal asociada
+ *         variables:
+ *           type: array
+ *           items:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               canMany:
+ *                 type: boolean
+ *               required:
+ *                 type: boolean
+ *               instructions:
+ *                 type: string
+ *               quantity:
+ *                 type: number
+ *               options:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     name:
+ *                       type: string
+ *                     price:
+ *                       type: number
+ *     ProductVariable:
+ *       type: object
+ *       required:
+ *         - name
+ *         - productsId
+ *       properties:
+ *         name:
+ *           type: string
+ *           description: Nombre de la variable
+ *         canMany:
+ *           type: boolean
+ *           default: false
+ *           description: Si permite múltiples selecciones
+ *         required:
+ *           type: boolean
+ *           default: false
+ *           description: Si es obligatorio
+ *         instructions:
+ *           type: string
+ *           description: Instrucciones para la variable
+ *         productsId:
+ *           type: string
+ *           description: ID del producto asociado
+ *         quantity:
+ *           type: number
+ *           default: 1
+ *           description: Cantidad por defecto
+ *     PricingPV:
+ *       type: object
+ *       required:
+ *         - name
+ *         - price
+ *         - pv
+ *       properties:
+ *         name:
+ *           type: string
+ *           description: Nombre de la opción de precio
+ *         price:
+ *           type: number
+ *           description: Precio de la opción
+ *         pv:
+ *           type: string
+ *           description: ID de la variable de producto
+ */
+
+class ProductController {
+  /**
+   * @swagger
+   * /products:
+   *   get:
+   *     summary: Obtener todos los productos de la empresa
+   *     tags: [Products]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           default: 1
+   *         description: Número de página
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           default: 20
+   *         description: Límite de productos por página
+   *       - in: query
+   *         name: category
+   *         schema:
+   *           type: string
+   *         description: Código de categoría para filtrar
+   *       - in: query
+   *         name: status
+   *         schema:
+   *           type: integer
+   *           enum: [0, 1]
+   *         description: Estado del producto para filtrar
+   *       - in: query
+   *         name: search
+   *         schema:
+   *           type: string
+   *         description: Término de búsqueda
+   *     responses:
+   *       200:
+   *         description: Lista de productos paginada
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 products:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Product'
+   *                 totalPages:
+   *                   type: integer
+   *                 currentPage:
+   *                   type: integer
+   *                 total:
+   *                   type: integer
+   *       401:
+   *         description: No autorizado
+   *       500:
+   *         description: Error del servidor
+   */
+  // Get all products for a company
+  static async getAllProducts(req, res) {
+    try {
+      const { page = 1, limit = 20, category, status, search } = req.query;
+      
+      const query = { companyId: req.company._id };
+      
+      if (category) {
+        const categoryProduct = await CategoryProduct.findOne({ 
+          categoryCode: category, 
+          companyID: req.company._id 
+        });
+        if (categoryProduct) {
+          query.categoryProductId = categoryProduct._id;
+        }
+      }
+      
+      if (status !== undefined) {
+        query.status = parseInt(status);
+      }
+      
+      if (search) {
+        query.$text = { $search: search };
+      }
+      
+      const products = await Product.find(query)
+        .populate('categoryProductId', 'categoryName')
+        .populate({
+          path: 'variables',
+          populate: {
+            path: 'options',
+            model: 'PricingPV'
+          }
+        })
+        .limit(limit * 1)
+        .skip((page - 1) * limit)
+        .sort({ createdAt: -1 });
+      
+      const total = await Product.countDocuments(query);
+      
+      res.json({
+        products,
+        totalPages: Math.ceil(total / limit),
+        currentPage: page,
+        total
+      });
+      
+    } catch (error) {
+      console.error('Get products error:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  }
+
+  /**
+   * @swagger
+   * /products/{id}:
+   *   get:
+   *     summary: Obtener un producto específico
+   *     tags: [Products]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: objectId
+   *         description: ID del producto
+   *     responses:
+   *       200:
+   *         description: Producto encontrado
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Product'
+   *       404:
+   *         description: Producto no encontrado
+   *       401:
+   *         description: No autorizado
+   *       500:
+   *         description: Error del servidor
+   */
+  // Get single product
+  static async getProduct(req, res) {
+    try {
+      const product = await Product.findOne({
+        _id: req.params.id,
+        companyId: req.company._id
+      })
+      .populate('categoryProductId', 'categoryName')
+      .populate({
+        path: 'variables',
+        populate: {
+          path: 'options',
+          model: 'PricingPV'
+        }
+      });
+      
+      if (!product) {
+        return res.status(404).json({ message: 'Product not found' });
+      }
+      
+      res.json(product);
+      
+    } catch (error) {
+      console.error('Get product error:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  }
+
+  /**
+   * @swagger
+   * /products:
+   *   post:
+   *     summary: Crear un nuevo producto
+   *     tags: [Products]
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         multipart/form-data:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - name
+   *               - pricing
+   *               - categoryProductId
+   *               - photo
+   *             properties:
+   *               name:
+   *                 type: string
+   *                 description: Nombre del producto
+   *               description:
+   *                 type: string
+   *                 description: Descripción del producto
+   *               pricing:
+   *                 type: number
+   *                 minimum: 0
+   *                 description: Precio del producto
+   *               categoryProductId:
+   *                 type: string
+   *                 format: objectId
+   *                 description: ID de la categoría
+   *               status:
+   *                 type: number
+   *                 enum: [0, 1]
+   *                 default: 1
+   *               visibleItem:
+   *                 type: boolean
+   *                 default: true
+   *               branchId:
+   *                 type: string
+   *                 format: objectId
+   *                 description: ID de la sucursal
+   *               photo:
+   *                 type: string
+   *                 format: binary
+   *                 description: Imagen del producto (obligatoria)
+   *               variables:
+   *                 type: array
+   *                 items:
+   *                   type: object
+   *                   properties:
+   *                     name:
+   *                       type: string
+   *                     canMany:
+   *                       type: boolean
+   *                     required:
+   *                       type: boolean
+   *                     instructions:
+   *                       type: string
+   *                     quantity:
+   *                       type: number
+   *                     options:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                         properties:
+   *                           name:
+   *                             type: string
+   *                           price:
+   *                             type: number
+   *     responses:
+   *       201:
+   *         description: Producto creado exitosamente
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Product'
+   *       400:
+   *         description: Datos inválidos o categoría no encontrada
+   *       401:
+   *         description: No autorizado
+   *       500:
+   *         description: Error del servidor
+   */
+  // Create new product
+  static async createProduct(req, res) {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+      
+             const { name, description, pricing, categoryProductId, variables, branchId, hasVariables, maxQuantity } = req.body;
+      
+                 // Verify category exists and belongs to company
+           const category = await CategoryProduct.findOne({
+             _id: categoryProductId,
+             companyID: req.company._id
+           });
+
+           if (!category) {
+             return res.status(400).json({ message: 'Invalid category ID. Category not found or does not belong to your company.' });
+           }
+
+           // Verify branch exists and belongs to company (if provided)
+           if (branchId) {
+             const Branch = require('../models/Branch');
+             const branch = await Branch.findOne({
+               _id: branchId,
+               companyID: req.company._id
+             });
+
+             if (!branch) {
+               return res.status(400).json({ message: 'Invalid branch ID. Branch not found or does not belong to your company.' });
+             }
+           }
+      
+      // Handle image URL or file upload
+      let imageUrl = null;
+      
+      if (req.body.url) {
+        // Check if it's a base64 image
+        if (req.body.url.startsWith('data:image/')) {
+          console.log('📸 Backend: Detectada imagen base64');
+          console.log('📸 Backend: Longitud de base64:', req.body.url.length);
+          console.log('📸 Backend: Tipo de imagen:', req.body.url.substring(5, req.body.url.indexOf(';')));
+          // Will process after product creation to get the product ID
+          imageUrl = req.body.url; // Temporary, will be replaced
+        } else {
+        // Use provided URL
+        imageUrl = req.body.url;
+        console.log('📸 Backend: Usando URL de imagen:', imageUrl);
+        }
+      } else if (req.file) {
+        // Handle file upload
+        if (!isMinioConfigured) {
+          return res.status(400).json({ message: 'File upload is not configured. Please set up MinIO.' });
+        }
+        try {
+          const uploadResult = await uploadFile(req.file, 'products');
+          imageUrl = uploadResult.fileUrl;
+          console.log('📸 Backend: Imagen subida a MinIO:', imageUrl);
+        } catch (uploadError) {
+          console.error('File upload error:', uploadError);
+          return res.status(400).json({ message: 'Error uploading file. Please try again.' });
+        }
+      } else {
+        // No image provided - this is now optional
+        console.log('⚠️ Backend: No se proporcionó imagen');
+      }
+      
+      // Generate product code and identifier
+      const productCode = require('uuid').v4();
+      const identifier = require('uuid').v4();
+      
+      const product = new Product({
+        productCode,
+        name,
+        description: description || '',
+        url: imageUrl,
+        pricing: parseFloat(pricing),
+        categoryProductId,
+        identifier,
+        status: 1,
+        visibleItem: true,
+        companyId: req.company._id,
+        branchId: branchId || null,
+        hasVariables: hasVariables || false,
+        maxQuantity: parseInt(maxQuantity) || 20
+      });
+      
+      await product.save();
+      
+      // Handle variables if provided
+      if (variables && Array.isArray(variables)) {
+        for (const variableData of variables) {
+          const variable = new ProductVariable({
+            name: variableData.name,
+            canMany: variableData.canMany || false,
+            required: variableData.required || false,
+            instructions: variableData.instructions || '',
+            productsId: product._id,
+            quantity: variableData.quantity || 1
+          });
+          
+          await variable.save();
+          
+          // Create pricing options for variable
+          if (variableData.options && Array.isArray(variableData.options)) {
+            for (const optionData of variableData.options) {
+              const pricingOption = new PricingPV({
+                name: optionData.name,
+                price: parseFloat(optionData.price) || 0,
+                pv: variable._id
+              });
+              
+              await pricingOption.save();
+              variable.options.push(pricingOption._id);
+            }
+            
+            await variable.save();
+          }
+          
+          product.variables.push(variable._id);
+        }
+        
+        await product.save();
+      }
+      
+      // Process base64 image with actual product ID
+      if (req.body.url && req.body.url.startsWith('data:image/')) {
+        console.log('🔄 Backend: Iniciando procesamiento de imagen base64...');
+        console.log('🔄 Backend: Product ID:', product._id);
+        console.log('🔄 Backend: MinIO configurado:', isMinioConfigured);
+        
+        try {
+          const finalImageUrl = await processBase64Image(req.body.url, product._id);
+          console.log('🔄 Backend: URL final generada:', finalImageUrl);
+          
+          product.url = finalImageUrl;
+          await product.save();
+          console.log('✅ Imagen base64 procesada y subida a MinIO');
+        } catch (error) {
+          console.error('❌ Error processing base64 image:', error);
+          console.error('❌ Error details:', error.message);
+          // Continue with base64 image if MinIO fails
+        }
+      }
+      
+      const populatedProduct = await Product.findById(product._id)
+        .populate('categoryProductId', 'categoryName')
+        .populate({
+          path: 'variables',
+          populate: {
+            path: 'options',
+            model: 'PricingPV'
+          }
+        });
+      
+      res.status(201).json({
+        message: 'Product created successfully',
+        product: populatedProduct
+      });
+      
+    } catch (error) {
+      console.error('Create product error:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  }
+
+  /**
+   * @swagger
+   * /products/{id}:
+   *   put:
+   *     summary: Actualizar un producto
+   *     tags: [Products]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: objectId
+   *         description: ID del producto
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               name:
+   *                 type: string
+   *               description:
+   *                 type: string
+   *               pricing:
+   *                 type: number
+   *                 minimum: 0
+   *               categoryProductId:
+   *                 type: string
+   *                 format: objectId
+   *               status:
+   *                 type: number
+   *                 enum: [0, 1]
+   *               visibleItem:
+   *                 type: boolean
+   *               branchId:
+   *                 type: string
+   *                 format: objectId
+   *     responses:
+   *       200:
+   *         description: Producto actualizado exitosamente
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Product'
+   *       404:
+   *         description: Producto no encontrado
+   *       400:
+   *         description: Datos inválidos
+   *       401:
+   *         description: No autorizado
+   *       500:
+   *         description: Error del servidor
+   */
+  // Update product
+  static async updateProduct(req, res) {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+      
+      const product = await Product.findOne({
+        _id: req.params.id,
+        companyId: req.company._id
+      });
+      
+      if (!product) {
+        return res.status(404).json({ message: 'Product not found' });
+      }
+      
+      const { name, description, pricing, status, visibleItem, categoryProductId, hasVariables, maxQuantity } = req.body;
+      const updateData = {};
+      
+      // ✅ CORREGIDO: Siempre actualizar name, incluso si está vacío
+      if (name !== undefined) updateData.name = name;
+      
+      // ✅ CORREGIDO: Siempre actualizar description, incluso si está vacío
+      if (description !== undefined) updateData.description = description;
+      
+      // ✅ CORREGIDO: Siempre actualizar pricing si se proporciona
+      if (pricing !== undefined) updateData.pricing = parseFloat(pricing);
+      
+      // ✅ CORREGIDO: Siempre actualizar status si se proporciona
+      if (status !== undefined) updateData.status = parseInt(status);
+      
+      // ✅ CORREGIDO: Siempre actualizar visibleItem si se proporciona
+      if (visibleItem !== undefined) updateData.visibleItem = visibleItem;
+      
+      // ✅ CORREGIDO: Siempre actualizar categoryProductId si se proporciona
+      if (categoryProductId !== undefined) updateData.categoryProductId = categoryProductId;
+      
+      // ✅ NUEVO: Actualizar hasVariables si se proporciona
+      if (hasVariables !== undefined) updateData.hasVariables = hasVariables;
+      
+      // ✅ NUEVO: Actualizar maxQuantity si se proporciona
+      if (maxQuantity !== undefined) updateData.maxQuantity = parseInt(maxQuantity) || 20;
+      
+      // Handle image URL or file upload
+      if (req.body.url !== undefined) {
+        // Check if it's a base64 image (new image)
+        if (req.body.url && req.body.url.startsWith('data:image/')) {
+          console.log('📸 Backend: Detectada nueva imagen base64 para actualizar');
+          
+          // Delete old image from MinIO if exists
+          if (product.url && product.url.includes('santiago1.grupogoit.cloud')) {
+            await deleteImageFromMinIO(product.url);
+          }
+          
+          // Will process after product update to get the product ID
+          updateData.url = req.body.url; // Temporary, will be replaced
+        } else if (req.body.url === '' || req.body.url === null) {
+          // Remove image
+          console.log('📸 Backend: Eliminando imagen del producto');
+          
+          // Delete old image from MinIO if exists
+          if (product.url && product.url.includes('santiago1.grupogoit.cloud')) {
+            await deleteImageFromMinIO(product.url);
+          }
+          
+          updateData.url = null;
+        } else {
+          // Use provided URL (external URL)
+          updateData.url = req.body.url;
+          console.log('📸 Backend: Actualizando con URL externa:', updateData.url);
+        }
+      } else if (req.file) {
+        // Handle file upload
+        if (!isMinioConfigured) {
+          return res.status(400).json({ message: 'File upload is not configured. Please set up MinIO.' });
+        }
+        
+        // Delete old image from MinIO if exists
+        if (product.url && product.url.includes('santiago1.grupogoit.cloud')) {
+          await deleteImageFromMinIO(product.url);
+        }
+        
+        try {
+          const uploadResult = await uploadFile(req.file, 'products');
+          updateData.url = uploadResult.fileUrl;
+          console.log('📸 Backend: Imagen subida a MinIO:', updateData.url);
+        } catch (uploadError) {
+          console.error('File upload error:', uploadError);
+          return res.status(400).json({ message: 'Error uploading file. Please try again.' });
+        }
+      }
+      
+      console.log('🔄 Backend: Datos a actualizar:', updateData);
+      
+      const updatedProduct = await Product.findByIdAndUpdate(
+        req.params.id,
+        updateData,
+        { new: true, runValidators: true }
+      )
+      .populate('categoryProductId', 'categoryName')
+      .populate({
+        path: 'variables',
+        populate: {
+          path: 'options',
+          model: 'PricingPV'
+        }
+      });
+      
+      // Process base64 image with actual product ID if needed
+      if (req.body.url && req.body.url.startsWith('data:image/')) {
+        console.log('🔄 Backend: Procesando nueva imagen base64...');
+        try {
+          const finalImageUrl = await processBase64Image(req.body.url, updatedProduct._id);
+          updatedProduct.url = finalImageUrl;
+          await updatedProduct.save();
+          console.log('✅ Nueva imagen base64 procesada y subida a MinIO');
+        } catch (error) {
+          console.error('❌ Error processing base64 image in update:', error);
+        }
+      }
+      
+      console.log('✅ Backend: Producto actualizado exitosamente:', updatedProduct);
+      
+      res.json({
+        message: 'Product updated successfully',
+        product: updatedProduct
+      });
+      
+    } catch (error) {
+      console.error('Update product error:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  }
+
+  /**
+   * @swagger
+   * /products/{id}:
+   *   delete:
+   *     summary: Eliminar un producto
+   *     tags: [Products]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: objectId
+   *         description: ID del producto
+   *     responses:
+   *       200:
+   *         description: Producto eliminado exitosamente
+   *       404:
+   *         description: Producto no encontrado
+   *       401:
+   *         description: No autorizado
+   *       500:
+   *         description: Error del servidor
+   */
+  // Delete product
+  static async deleteProduct(req, res) {
+    try {
+      const product = await Product.findOne({
+        _id: req.params.id,
+        companyId: req.company._id
+      });
+      
+      if (!product) {
+        return res.status(404).json({ message: 'Product not found' });
+      }
+      
+      // Delete associated variables and pricing options
+      if (product.variables.length > 0) {
+        for (const variableId of product.variables) {
+          const variable = await ProductVariable.findById(variableId);
+          if (variable && variable.options.length > 0) {
+            await PricingPV.deleteMany({ _id: { $in: variable.options } });
+          }
+        }
+        await ProductVariable.deleteMany({ _id: { $in: product.variables } });
+      }
+      
+      // Delete image from MinIO if exists
+      if (product.url && product.url.includes('santiago1.grupogoit.cloud')) {
+        console.log('🗑️ Eliminando imagen de MinIO para producto:', product._id);
+        await deleteImageFromMinIO(product.url);
+      }
+      
+      await Product.findByIdAndDelete(req.params.id);
+      
+      res.json({ message: 'Product deleted successfully' });
+      
+    } catch (error) {
+      console.error('Delete product error:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  }
+
+  // Get product categories
+  /**
+   * @swagger
+   * /products/categories:
+   *   get:
+   *     summary: Obtener categorías disponibles para productos
+   *     tags: [Products]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Lista de categorías
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: array
+   *               items:
+   *                 type: object
+   *                 properties:
+   *                   _id:
+   *                     type: string
+   *                     format: objectId
+   *                   categoryName:
+   *                     type: string
+   *                   categoryCode:
+   *                     type: string
+   *                   status:
+   *                     type: number
+   *       401:
+   *         description: No autorizado
+   *       500:
+   *         description: Error del servidor
+   */
+  static async getCategories(req, res) {
+    try {
+      const categories = await CategoryProduct.find({ companyID: req.company._id })
+        .sort({ categoryName: 1 });
+      
+      res.json(categories);
+      
+    } catch (error) {
+      console.error('Get categories error:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  }
+}
+
+module.exports = ProductController;
