@@ -1,0 +1,699 @@
+================================================================================
+ESPECIFICACIONES COMPLETAS DEL SOFTWARE SOLHANA
+Panel de Administración para Tienda de Ropa
+================================================================================
+
+INFORMACION GENERAL DEL PROYECTO
+================================================================================
+Nombre: Solhana Proyecto
+Version: 0.1.0
+Tipo: Panel de Administración E-commerce
+Base de Datos: Supabase (PostgreSQL)
+Framework Frontend: Next.js con App Router
+Lenguaje: TypeScript
+Estado: En Desarrollo
+
+VERSIONES DE DEPENDENCIAS PRINCIPALES
+================================================================================
+
+DEPENDENCIAS DE PRODUCCION:
+- next: 15.2.4
+- react: 19.0.0
+- react-dom: 19.0.0
+- @supabase/supabase-js: 2.86.0
+- sweetalert2: 11.26.3
+- @anthropic-ai/sdk: 0.71.0
+
+DEPENDENCIAS DE DESARROLLO:
+- typescript: 5.0.0
+- @types/node: 20.0.0
+- @types/react: 19.0.0
+- @types/react-dom: 19.0.0
+- eslint: 8.0.0
+- eslint-config-next: 15.2.4
+- postcss: 8.5.6
+- autoprefixer: 10.4.22
+- browserslist: 4.28.0
+- caniuse-lite: 1.0.30001757
+
+REQUISITOS DEL SISTEMA
+================================================================================
+- Node.js: v18 o superior
+- Navegador: Compatible con ES2017+
+- Base de Datos: Supabase (PostgreSQL)
+- Almacenamiento: Supabase Storage
+
+CONFIGURACION TYPESCRIPT
+================================================================================
+Target: ES2017
+Lib: dom, dom.iterable, esnext
+Module: esnext
+Module Resolution: bundler
+JSX: preserve
+Strict Mode: Habilitado
+Path Alias: @/* -> ./*
+
+CONFIGURACION NEXT.JS
+================================================================================
+React Strict Mode: Habilitado
+App Router: Habilitado
+Server Components: Habilitado
+Client Components: Habilitado (donde sea necesario)
+
+ESTRUCTURA DEL PROYECTO
+================================================================================
+
+CARPETAS PRINCIPALES:
+- app/ - Páginas y rutas de Next.js App Router
+- components/ - Componentes reutilizables de React
+- lib/ - Utilidades y funciones auxiliares
+- hooks/ - Custom hooks de React
+- public/ - Archivos estáticos (si existe)
+
+MODULOS Y PAGINAS
+================================================================================
+
+1. DASHBOARD (app/page.tsx)
+   - KPIs principales (Ventas Totales, Pedidos, Visitantes, Conversión)
+   - Tabla de últimos pedidos
+   - Gráfico de ventas
+   - Productos más vendidos
+   - Productos con bajo stock
+   - Comparación con período anterior
+
+2. PEDIDOS (app/pedidos/)
+   - Listado de pedidos con paginación
+   - Filtros por estado (Pendiente, Procesando, Enviado, Completado, Cancelado)
+   - Búsqueda por ID o cliente
+   - Vista detallada de pedido individual
+   - Gestión de estados de pedido
+   - Historial de cambios
+
+3. PRODUCTOS (app/productos/)
+   - Listado de productos con paginación
+   - Búsqueda por nombre o SKU
+   - Filtros por estado (Activo, Inactivo, Todos)
+   - Crear nuevo producto
+   - Editar producto existente
+   - Eliminar producto
+   - Gestión de categorías
+   - Sistema de variantes (Color, Talla, etc.)
+   - Múltiples imágenes por producto
+   - Especificaciones técnicas
+   - Etiquetas (Nuevo, Best Seller, Oferta)
+   - Control de stock
+
+4. CLIENTES (app/clientes/)
+   - Listado de clientes con paginación
+   - Búsqueda por nombre, email, teléfono
+   - Filtros por tipo (Nuevo, Recurrente, VIP)
+   - Ver detalles de cliente
+   - Editar cliente
+   - Eliminar cliente
+   - Historial de compras
+   - Total gastado
+
+5. ANALITICAS/REPORTES (app/analiticas/)
+   - KPIs de ventas
+   - Gráfico de ventas por día
+   - Gráfico de dona por categorías
+   - Tabla de productos más vendidos
+   - Filtros por período (Hoy, Últimos 7 días, Este Mes, Rango Personalizado)
+   - Exportación de reportes
+   - Comparación con períodos anteriores
+
+6. DISEÑO (app/diseno/)
+   - Editor de página de inicio
+   - Gestión de banner principal
+   - Organización de secciones
+   - Vista previa en tiempo real
+   - Subida de imágenes para banners
+   - Configuración de textos y botones
+
+7. CONFIGURACION (app/configuracion/)
+   - Configuración general del sistema
+
+8. AYUDA (app/ayuda/)
+   - Documentación y ayuda
+
+COMPONENTES REUTILIZABLES
+================================================================================
+
+1. Sidebar (components/Sidebar.tsx)
+   - Navegación principal
+   - Logo y branding
+   - Enlaces a secciones
+   - Footer con enlaces adicionales
+
+2. Header (components/Header.tsx)
+   - Barra superior
+   - Información del usuario
+   - Notificaciones
+
+3. KPICard (components/KPICard.tsx)
+   - Tarjeta de métrica
+   - Valor principal
+   - Cambio porcentual
+   - Indicador positivo/negativo
+
+4. OrdersTable (components/OrdersTable.tsx)
+   - Tabla de pedidos recientes
+   - Estados visuales
+   - Enlaces a detalles
+
+5. TopProducts (components/TopProducts.tsx)
+   - Lista de productos más vendidos
+   - Información de ventas
+
+6. SalesChart (components/SalesChart.tsx)
+   - Gráfico de ventas
+   - Visualización de tendencias
+
+7. LowStockProducts (components/LowStockProducts.tsx)
+   - Productos con stock bajo
+   - Alertas de inventario
+
+8. ImageUploader (components/ImageUploader.tsx)
+   - Subida de múltiples imágenes
+   - Validación de archivos
+   - Vista previa
+   - Eliminación de imágenes
+   - Integración con Supabase Storage
+
+9. Modal (components/Modal.tsx)
+   - Modal genérico reutilizable
+
+10. AddAttributeModal (components/AddAttributeModal.tsx)
+    - Modal para agregar atributos de variantes
+
+11. AddValueModal (components/AddValueModal.tsx)
+    - Modal para agregar valores a atributos
+
+FUNCIONALIDADES DE BASE DE DATOS
+================================================================================
+
+TABLAS PRINCIPALES:
+
+1. categorias
+   - id (UUID)
+   - nombre (VARCHAR 100)
+   - descripcion (TEXT)
+   - icono (VARCHAR 50)
+   - orden (INTEGER)
+   - estado (Activo/Inactivo)
+   - created_at, updated_at
+
+2. productos
+   - id (UUID)
+   - sku (VARCHAR 50, UNIQUE)
+   - nombre (VARCHAR 200)
+   - descripcion (TEXT)
+   - descripcion_corta (TEXT)
+   - precio (DECIMAL 10,2)
+   - descuento (DECIMAL 5,2)
+   - precio_original (DECIMAL 10,2)
+   - stock (INTEGER)
+   - categoria_id (UUID, FK)
+   - tipo_producto (VARCHAR 100)
+   - estado (Borrador/Activo/Inactivo)
+   - tiene_variantes (BOOLEAN)
+   - es_nuevo (BOOLEAN)
+   - es_best_seller (BOOLEAN)
+   - es_oferta (BOOLEAN)
+   - etiqueta_personalizada (VARCHAR 50)
+   - tiempo_envio (VARCHAR 50)
+   - calificacion_promedio (DECIMAL 3,2)
+   - total_resenas (INTEGER)
+   - created_at, updated_at
+
+3. producto_imagenes
+   - id (UUID)
+   - producto_id (UUID, FK)
+   - url (TEXT)
+   - orden (INTEGER)
+   - es_principal (BOOLEAN)
+   - created_at
+
+4. producto_variantes
+   - id (UUID)
+   - producto_id (UUID, FK)
+   - atributos (JSONB) - Ej: {"Color": "Negro", "Talla": "M"}
+   - precio (DECIMAL 10,2)
+   - sku (VARCHAR 50, UNIQUE)
+   - stock (INTEGER)
+   - activo (BOOLEAN)
+   - imagen_url (TEXT)
+   - created_at, updated_at
+
+5. producto_especificaciones
+   - id (UUID)
+   - producto_id (UUID, FK)
+   - nombre (VARCHAR 200)
+   - valor (TEXT)
+   - created_at
+
+6. clientes
+   - id (UUID)
+   - nombre (VARCHAR 200)
+   - apellido (VARCHAR 200)
+   - email (VARCHAR 255, UNIQUE)
+   - telefono (VARCHAR 50)
+   - whatsapp (VARCHAR 50)
+   - tipo (Nuevo/Recurrente/VIP)
+   - fecha_registro (TIMESTAMP)
+   - total_pedidos (INTEGER)
+   - total_gastado (DECIMAL 10,2)
+   - user_id (UUID) - Para integración con Supabase Auth
+   - created_at, updated_at
+
+7. cliente_direcciones
+   - id (UUID)
+   - cliente_id (UUID, FK)
+   - tipo (envio/facturacion)
+   - calle (TEXT)
+   - ciudad (VARCHAR 100)
+   - codigo_postal (VARCHAR 20)
+   - pais (VARCHAR 100)
+   - referencias (TEXT)
+   - es_principal (BOOLEAN)
+   - created_at
+
+8. pedidos
+   - id (UUID)
+   - numero_pedido (VARCHAR 50, UNIQUE)
+   - cliente_id (UUID, FK)
+   - nombre_cliente (VARCHAR 200)
+   - apellido_cliente (VARCHAR 200)
+   - telefono_cliente (VARCHAR 50)
+   - email_cliente (VARCHAR 255)
+   - estado (Pendiente/Procesando/Enviado/Completado/Cancelado)
+   - subtotal (DECIMAL 10,2)
+   - descuento (DECIMAL 10,2)
+   - costo_envio (DECIMAL 10,2)
+   - envio_prioritario (BOOLEAN)
+   - total (DECIMAL 10,2)
+   - metodo_pago (Efectivo/Transferencia QR/Tarjeta/Otro)
+   - metodo_envio (VARCHAR 100)
+   - direccion_envio_id (UUID, FK)
+   - direccion_facturacion_id (UUID, FK)
+   - direccion_completa (TEXT)
+   - ciudad_envio (VARCHAR 100)
+   - referencias_envio (TEXT)
+   - whatsapp_enviado (BOOLEAN)
+   - fecha_pedido (TIMESTAMP)
+   - fecha_entrega (TIMESTAMP)
+   - created_at, updated_at
+
+9. pedido_items
+   - id (UUID)
+   - pedido_id (UUID, FK)
+   - producto_id (UUID, FK)
+   - variante_id (UUID, FK)
+   - nombre_producto (VARCHAR 200)
+   - sku (VARCHAR 50)
+   - precio_unitario (DECIMAL 10,2)
+   - cantidad (INTEGER)
+   - subtotal (DECIMAL 10,2)
+   - created_at
+
+10. pedido_historial
+    - id (UUID)
+    - pedido_id (UUID, FK)
+    - estado (VARCHAR 50)
+    - descripcion (TEXT)
+    - fecha (TIMESTAMP)
+    - completado (BOOLEAN)
+
+11. carrito
+    - id (UUID)
+    - cliente_id (UUID, FK)
+    - session_id (VARCHAR)
+    - producto_id (UUID, FK)
+    - variante_id (UUID, FK)
+    - cantidad (INTEGER)
+    - precio_unitario (DECIMAL 10,2)
+    - color (VARCHAR)
+    - talla (VARCHAR)
+    - created_at, updated_at
+
+VISTAS DE BASE DE DATOS:
+
+1. productos_catalogo
+   - Vista optimizada para catálogo
+   - Incluye precio_final calculado
+   - Incluye imagen_principal
+   - Incluye estado_stock
+
+2. carrito_completo
+   - Vista del carrito con información completa
+   - Incluye datos del producto
+   - Incluye datos de variante
+   - Calcula subtotal
+
+FUNCIONES Y QUERIES DISPONIBLES
+================================================================================
+
+LIBRERIA: lib/supabase-queries.ts
+
+PRODUCTOS:
+- getProductos(filters) - Obtener productos con filtros
+- getTotalProductos(filters) - Contar productos
+- getProductoById(id) - Obtener producto por ID
+- crearProducto(producto) - Crear nuevo producto
+- actualizarProducto(id, producto) - Actualizar producto
+- eliminarProducto(id) - Eliminar producto
+- actualizarVariantesProducto(productoId, variantes) - Gestionar variantes
+- getProductosCatalogo(filters) - Obtener productos para catálogo público
+
+CATEGORIAS:
+- getCategorias() - Obtener todas las categorías
+- getCategoriaById(id) - Obtener categoría por ID
+
+CARRITO:
+- getCarrito(clienteId, sessionId) - Obtener carrito
+- agregarAlCarrito(item) - Agregar item al carrito
+- actualizarCantidadCarrito(id, cantidad) - Actualizar cantidad
+- eliminarDelCarrito(id) - Eliminar item del carrito
+- limpiarCarrito(clienteId, sessionId) - Vaciar carrito
+
+PEDIDOS:
+- crearPedido(pedido) - Crear nuevo pedido
+- getPedidos(filters) - Obtener pedidos con filtros
+- getTotalPedidos(filters) - Contar pedidos
+- getPedidoById(id) - Obtener pedido por ID o número
+
+CLIENTES:
+- crearCliente(cliente) - Crear nuevo cliente
+- getClientes(filters) - Obtener clientes con filtros
+- getTotalClientes(filters) - Contar clientes
+- actualizarCliente(id, cliente) - Actualizar cliente
+- eliminarCliente(id) - Eliminar cliente
+
+RESEÑAS:
+- getResenasProducto(productoId) - Obtener reseñas de producto
+- crearResena(resena) - Crear nueva reseña
+
+METODOS DE PAGO Y ENVIO:
+- getMetodosPago() - Obtener métodos de pago activos
+- getMetodosEnvio() - Obtener métodos de envío activos
+- getCiudadesEnvio() - Obtener ciudades de envío
+
+NEWSLETTER:
+- suscribirNewsletter(email, nombre) - Suscribir a newsletter
+
+PRODUCTOS RELACIONADOS:
+- getProductosRelacionados(productoId) - Obtener productos relacionados
+
+DASHBOARD:
+- getDashboardKPIs() - Obtener KPIs del dashboard
+- getUltimosPedidos(limit) - Obtener últimos pedidos
+- getProductosMasVendidos(limit) - Obtener productos más vendidos
+- getProductosBajoStock(limit, umbral) - Obtener productos con bajo stock
+- getVentasPorPeriodo(periodo) - Obtener ventas por período
+
+REPORTES Y ANALITICAS:
+- getReportesKPIs(periodo) - Obtener KPIs de reportes
+- getVentasPorDia(periodo) - Obtener ventas agrupadas por día
+- getProductosMasVendidosReporte(limit) - Productos más vendidos para reporte
+- getVentasPorCategoria(periodo) - Ventas agrupadas por categoría
+
+FUNCIONALIDADES DE ALMACENAMIENTO
+================================================================================
+
+LIBRERIA: lib/supabase-storage.ts
+
+FUNCIONES:
+- uploadImage(file, bucket, folder) - Subir una imagen
+- uploadMultipleImages(files, bucket, folder) - Subir múltiples imágenes
+- deleteImage(filePath, bucket) - Eliminar imagen
+- getImageUrl(filePath, bucket) - Obtener URL pública
+- validateImageFile(file) - Validar archivo de imagen
+
+VALIDACIONES:
+- Tipos permitidos: JPEG, JPG, PNG, WEBP, GIF
+- Tamaño máximo: 5MB
+- Buckets disponibles: productos, banners
+
+FUNCIONALIDADES DE INTERFAZ
+================================================================================
+
+ALERTAS Y NOTIFICACIONES:
+- SweetAlert2 integrado
+- Funciones helper en lib/swal.ts:
+  * showSuccess(title, message)
+  * showError(title, message)
+  * showConfirm(title, message, confirmText, cancelText)
+  * showInfo(title, message)
+  * showLoading(title)
+  * closeLoading()
+
+ICONOS:
+- Sistema de iconos personalizado en components/Icons.tsx
+- Iconos disponibles:
+  * DashboardIcon
+  * OrdersIcon
+  * ProductsIcon
+  * ClientsIcon
+  * AnalyticsIcon
+  * SettingsIcon
+  * LogoIcon
+  * HelpIcon
+  * PlusIcon
+  * EditIcon
+  * TrashIcon
+  * SearchIcon
+  * EyeIcon
+  * Y más...
+
+ESTILOS:
+- CSS Modules para todos los componentes
+- Estilos modulares por componente
+- Diseño responsive
+- Tema consistente en toda la aplicación
+
+CARACTERISTICAS ESPECIALES
+================================================================================
+
+1. SISTEMA DE VARIANTES DINAMICO:
+   - Atributos personalizables (Color, Talla, etc.)
+   - Valores múltiples por atributo
+   - Precio y stock por variante
+   - SKU único por variante
+   - Imagen por variante
+
+2. GESTION DE IMAGENES:
+   - Múltiples imágenes por producto
+   - Imagen principal
+   - Orden de imágenes
+   - Subida a Supabase Storage
+   - Validación de archivos
+   - Vista previa
+
+3. SISTEMA DE ETIQUETAS:
+   - Nuevo
+   - Best Seller
+   - Oferta
+   - Etiqueta personalizada
+
+4. CONTROL DE STOCK:
+   - Stock por producto
+   - Stock por variante
+   - Alertas de bajo stock
+   - Estados: En Stock, Bajo Stock, Sin Stock
+
+5. GESTION DE PEDIDOS:
+   - Estados: Pendiente, Procesando, Enviado, Completado, Cancelado
+   - Historial de cambios
+   - Información completa del cliente
+   - Items detallados
+   - Cálculo de totales
+   - Métodos de pago
+   - Métodos de envío
+
+6. ANALITICAS AVANZADAS:
+   - KPIs en tiempo real
+   - Gráficos de ventas
+   - Comparación con períodos anteriores
+   - Productos más vendidos
+   - Ventas por categoría
+   - Filtros por período
+
+7. DISEÑO DE PAGINA:
+   - Editor visual
+   - Vista previa en tiempo real
+   - Gestión de banners
+   - Organización de secciones
+   - Drag and drop (preparado)
+
+8. BUSQUEDA Y FILTROS:
+   - Búsqueda en tiempo real
+   - Filtros múltiples
+   - Paginación
+   - Ordenamiento
+
+CONFIGURACION DE SUPABASE
+================================================================================
+
+URL POR DEFECTO: https://ztbiqgfypxgptvconxon.supabase.co
+
+VARIABLES DE ENTORNO REQUERIDAS:
+- NEXT_PUBLIC_SUPABASE_URL
+- NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+ARCHIVO: .env.local (no incluido en repositorio)
+
+EXTENSIONES DE POSTGRESQL:
+- uuid-ossp (para generación de UUIDs)
+- pg_trgm (para búsqueda de texto)
+
+SCRIPTS DISPONIBLES
+================================================================================
+
+npm run dev - Inicia servidor de desarrollo en http://localhost:3000
+npm run build - Construye aplicación para producción
+npm start - Inicia servidor de producción
+npm run lint - Ejecuta el linter
+
+ARQUITECTURA
+================================================================================
+
+PATRON: Next.js App Router con Server y Client Components
+
+SERVER COMPONENTS:
+- Layout principal
+- Metadata
+- Carga inicial de datos
+
+CLIENT COMPONENTS:
+- Interactividad
+- Estado local
+- Eventos de usuario
+- Hooks de React
+
+ESTADO:
+- React Hooks (useState, useEffect)
+- No se usa Redux ni Context API global
+- Estado local por componente
+
+ROUTING:
+- File-based routing de Next.js
+- Rutas dinámicas: [id]
+- Navegación con Link de Next.js
+
+ESTILOS:
+- CSS Modules
+- No se usa Tailwind CSS
+- Estilos personalizados por componente
+
+SEGURIDAD
+================================================================================
+
+- Variables de entorno para credenciales
+- Validación de archivos en cliente y servidor
+- Sanitización de inputs
+- Supabase Row Level Security (RLS) recomendado
+- Validación de tipos con TypeScript
+
+PERFORMANCE
+================================================================================
+
+- Server Components para reducir JavaScript
+- Lazy loading de componentes
+- Optimización de imágenes (Supabase Storage)
+- Paginación en listados
+- Queries optimizadas con índices
+
+INTEGRACIONES
+================================================================================
+
+1. SUPABASE:
+   - Base de datos PostgreSQL
+   - Storage para imágenes
+   - Autenticación (preparado)
+   - Real-time (disponible)
+
+2. SWEETALERT2:
+   - Alertas y confirmaciones
+   - Notificaciones de usuario
+
+3. ANTHROPIC AI SDK:
+   - Integración preparada (no implementada aún)
+
+FUNCIONALIDADES FUTURAS (PREPARADAS)
+================================================================================
+
+- Autenticación de usuarios
+- Roles y permisos
+- Real-time updates
+- Exportación de reportes
+- Integración con WhatsApp
+- Sistema de notificaciones
+- Multi-idioma
+- Tema oscuro
+
+ARCHIVOS DE DOCUMENTACION
+================================================================================
+
+- README.md - Información básica del proyecto
+- DATABASE_README.md - Documentación de base de datos
+- SUPABASE_SETUP.md - Guía de configuración de Supabase
+- COMO_OBTENER_SUPABASE_KEY.md - Instrucciones para obtener keys
+- GUIA_VISUAL_SUPABASE.md - Guía visual de Supabase
+- supabase_schema.sql - Esquema completo de base de datos
+- ejemplo-uso-supabase.tsx - Ejemplos de uso
+
+ESTRUCTURA DE ARCHIVOS CSS
+================================================================================
+
+Cada componente tiene su archivo CSS Module:
+- ComponentName.module.css
+- Estilos scoped al componente
+- Clases con nombres únicos
+- No hay conflictos de estilos
+
+NAVEGACION
+================================================================================
+
+RUTAS PRINCIPALES:
+- / - Dashboard
+- /pedidos - Lista de pedidos
+- /pedidos/[id] - Detalle de pedido
+- /productos - Lista de productos
+- /productos/nuevo - Crear producto
+- /productos/editar/[id] - Editar producto
+- /productos/categorias - Gestión de categorías
+- /clientes - Lista de clientes
+- /clientes/editar/[id] - Editar cliente
+- /analiticas - Reportes y analíticas
+- /diseno - Diseño de página de inicio
+- /configuracion - Configuración
+- /ayuda - Ayuda
+
+COMPATIBILIDAD
+================================================================================
+
+NAVEGADORES:
+- Chrome (últimas versiones)
+- Firefox (últimas versiones)
+- Safari (últimas versiones)
+- Edge (últimas versiones)
+
+RESPONSIVE:
+- Diseño adaptable
+- Funciona en desktop y tablet
+- Optimizado para pantallas grandes
+
+NOTAS IMPORTANTES
+================================================================================
+
+1. El proyecto requiere configuración de Supabase antes de usar
+2. Las variables de entorno deben configurarse en .env.local
+3. El esquema de base de datos debe ejecutarse en Supabase
+4. Los buckets de Storage deben crearse en Supabase
+5. Se recomienda configurar Row Level Security (RLS) en Supabase
+6. El proyecto está en desarrollo activo
+7. Algunas funcionalidades pueden estar en desarrollo
+
+FIN DEL DOCUMENTO
+================================================================================
+
