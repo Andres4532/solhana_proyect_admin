@@ -1,0 +1,366 @@
+.container {
+  padding: 24px;
+  max-width: 1280px;
+  margin: 0 auto;
+  width: 100%;
+  background-color: var(--background-light);
+  min-height: 100vh;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.headerContent {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.title {
+  font-size: 30px;
+  font-weight: 900;
+  color: var(--slate-900);
+  margin: 0 0 4px 0;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--slate-500);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.filtersSection {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.dateFilters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.dateButton {
+  display: flex;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  border: 1px solid var(--slate-200);
+  background-color: var(--white);
+  color: var(--slate-900);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.dateButton:hover {
+  border-color: var(--primary);
+}
+
+.dateButton.active {
+  background-color: rgba(19, 127, 236, 0.2);
+  border-color: var(--primary);
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.exportButton {
+  display: flex;
+  min-width: 84px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  overflow: hidden;
+  border-radius: 8px;
+  height: 40px;
+  padding: 0 16px;
+  background-color: var(--primary);
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: 0.015em;
+  transition: all 0.2s;
+  border: none;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.exportButton:hover {
+  background-color: rgba(19, 127, 236, 0.9);
+}
+
+.kpiGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+@media (min-width: 640px) {
+  .kpiGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .kpiGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.chartsGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+@media (min-width: 1024px) {
+  .chartsGrid {
+    grid-template-columns: 2fr 1fr;
+  }
+}
+
+.chartCard {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border-radius: 12px;
+  border: 1px solid var(--slate-200);
+  background-color: var(--white);
+  padding: 24px;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.chartHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.chartTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--slate-900);
+  margin: 0 0 4px 0;
+  line-height: 1.4;
+}
+
+.chartSubtitle {
+  font-size: 14px;
+  color: var(--slate-500);
+  margin: 0;
+}
+
+.lineChart {
+  width: 100%;
+  height: 288px;
+}
+
+.chartSvg {
+  width: 100%;
+  height: 100%;
+}
+
+.donutChartContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+}
+
+.donutChart {
+  position: relative;
+  width: 192px;
+  height: 192px;
+  margin: 24px 0;
+}
+
+.donutSvg {
+  width: 100%;
+  height: 100%;
+}
+
+.donutCenterText {
+  font-size: 24px;
+  font-weight: 700;
+  fill: var(--slate-900);
+}
+
+.donutCenterSubtext {
+  font-size: 14px;
+  fill: var(--slate-500);
+}
+
+.legend {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.legendItem > span:first-of-type {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--slate-500);
+}
+
+.legendColor {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legendPercent {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--slate-900);
+}
+
+.tableCard {
+  border-radius: 12px;
+  border: 1px solid var(--slate-200);
+  background-color: var(--white);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.tableHeader {
+  padding: 24px 24px 0 24px;
+}
+
+.tableTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--slate-900);
+  margin: 0 0 4px 0;
+  line-height: 1.4;
+}
+
+.tableSubtitle {
+  font-size: 14px;
+  color: var(--slate-500);
+  margin: 0 0 24px 0;
+}
+
+.tableContainer {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  text-align: left;
+}
+
+.table thead {
+  background-color: var(--background-light);
+}
+
+.table thead th {
+  padding: 12px 24px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--slate-500);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.table tbody tr {
+  border-bottom: 1px solid var(--slate-200);
+}
+
+.table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.table tbody td {
+  padding: 16px 24px;
+  color: var(--slate-500);
+}
+
+.table tbody th {
+  padding: 16px 24px;
+  font-weight: 500;
+  color: var(--slate-900);
+  white-space: nowrap;
+}
+
+.sku {
+  color: var(--slate-500);
+}
+
+.productName {
+  color: var(--slate-900);
+  font-weight: 500;
+}
+
+.units {
+  color: var(--slate-900);
+}
+
+.revenue {
+  color: var(--slate-900);
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .filtersSection {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dateFilters {
+    width: 100%;
+  }
+
+  .dateButton {
+    flex: 1;
+  }
+
+  .exportButton {
+    width: 100%;
+    justify-content: center;
+  }
+}

@@ -1,0 +1,124 @@
+.card {
+  background-color: var(--white);
+  border-radius: 12px;
+  padding: 24px;
+  border: 1px solid var(--slate-200);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.headerRow {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.headerTop {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--slate-900);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.valueContainer {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.value {
+  font-size: 30px;
+  font-weight: 700;
+  color: var(--slate-900);
+  margin: 0;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.change {
+  font-size: 14px;
+  color: var(--green-500);
+  font-weight: 500;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.controls {
+  display: flex;
+  gap: 8px;
+}
+
+.button {
+  padding: 8px 16px;
+  border: none;
+  background-color: var(--slate-100);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--slate-700);
+  cursor: pointer;
+  transition: all 0.2s;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.button:hover {
+  background-color: var(--slate-200);
+}
+
+.button.active {
+  background-color: var(--primary);
+  color: var(--white);
+}
+
+.chart {
+  width: 100%;
+  min-height: 250px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.chartArea {
+  width: 100%;
+  height: 100%;
+  margin-bottom: 8px;
+  flex: 1;
+}
+
+.svg {
+  width: 100%;
+  height: 100%;
+}
+
+.labels {
+  display: flex;
+  justify-content: space-around;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--slate-500);
+  padding-top: 8px;
+}
+
+
+

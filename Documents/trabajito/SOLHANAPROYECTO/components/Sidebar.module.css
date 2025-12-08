@@ -1,0 +1,149 @@
+.sidebar {
+  width: 256px;
+  height: 100vh;
+  background-color: var(--white);
+  border-right: 1px solid var(--slate-200);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 100;
+  flex-shrink: 0;
+}
+
+.header {
+  padding: 16px;
+  border-bottom: 1px solid var(--slate-200);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+}
+
+.logoIcon {
+  width: 40px;
+  height: 40px;
+  background-color: var(--primary);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBHmlv4XJYfCnAdJoCOc80W1E-Rp6Avl_qzcOyu5JEIOMyl5R5lOAJFvlCsOd04YxMwPITW7Z665iNAEU7VUyziqsvL898l9SCZ9GdcuQCdS6fTie_GEwX_ajcLtAWgskdsdIFubLTUvr9yAfYTnQjr6zohbNjj0nfJmI4ZtpHcPOf5ttU30DLVXl_6QdI6RWX1IaK05XfKHjP4-T0-3PagqUHenXltH6i9gHissl7x7k4j9XyZ1FX9NWF6trsfQ8_IdZ2Pa4xFmIu3');
+}
+
+.logoTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--slate-900);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.logoSubtitle {
+  font-size: 14px;
+  color: var(--slate-500);
+  margin: 0;
+  line-height: 1.2;
+  font-weight: 400;
+}
+
+.nav {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: var(--slate-700);
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.navItem:hover {
+  background-color: var(--slate-100);
+  color: var(--slate-700);
+}
+
+.navItem.active {
+  background-color: rgba(19, 127, 236, 0.1);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.navIcon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 24px;
+}
+
+.navItem .material-symbols-outlined {
+  font-size: 24px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.footer {
+  padding: 16px;
+  border-top: 1px solid var(--slate-200);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.viewStoreButton {
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 8px 16px;
+  background-color: var(--primary);
+  color: white;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background-color 0.2s;
+}
+
+.viewStoreButton:hover {
+  background-color: rgba(19, 127, 236, 0.9);
+}
+
+.footerLinks {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+
+@media (max-width: 768px) {
+  .sidebar {
+    display: none;
+  }
+}
+
