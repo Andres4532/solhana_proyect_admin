@@ -49,6 +49,9 @@ Esta guía te ayudará a desplegar tu proyecto Next.js en Vercel para compartirl
    - **Build Command:** `npm run build` (automático)
    - **Output Directory:** `.next` (automático)
    - **Install Command:** `npm install` (automático)
+   - **Project Name:** ⚠️ **IMPORTANTE** - Solo letras, números y guiones bajos (_)
+     - ✅ Válidos: `solhana_proyect_client`, `solhanaproyectclient`, `mi_tienda`
+     - ❌ Inválidos: `solhana-proyect-client` (guión), `123proyecto` (empieza con número), `mi proyecto` (espacio)
 
 2. **Configurar Variables de Entorno:**
    - Haz clic en "Environment Variables"
@@ -174,6 +177,35 @@ Cada vez que hagas `git push` a tu repositorio:
 ---
 
 ## 🐛 Solución de Problemas
+
+### Error: "The name contains invalid characters"
+
+Este error ocurre cuando el nombre del proyecto tiene caracteres no permitidos.
+
+**Solución:**
+1. El nombre del proyecto solo puede contener:
+   - ✅ Letras (a-z, A-Z)
+   - ✅ Números (0-9)
+   - ✅ Guiones bajos (_)
+   - ❌ NO puede empezar con un número
+   - ❌ NO puede tener guiones (-), espacios, puntos (.) u otros caracteres
+
+2. **Ejemplos de nombres válidos:**
+   - `solhana_proyect_client` ✅
+   - `solhanaproyectclient` ✅
+   - `mi_tienda_online` ✅
+   - `proyecto123` ✅
+
+3. **Ejemplos de nombres inválidos:**
+   - `solhana-proyect-client` ❌ (tiene guiones)
+   - `123proyecto` ❌ (empieza con número)
+   - `mi proyecto` ❌ (tiene espacio)
+   - `proyecto.tienda` ❌ (tiene punto)
+
+4. **Cómo corregirlo:**
+   - En la pantalla de configuración de Vercel, cambia el "Project Name"
+   - Reemplaza los guiones (-) con guiones bajos (_)
+   - Ejemplo: `solhana-proyect-client` → `solhana_proyect_client`
 
 ### Error: "Build Failed"
 

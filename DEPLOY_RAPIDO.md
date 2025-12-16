@@ -35,6 +35,9 @@
 4. **Configura el proyecto:**
    - **Framework:** Next.js (se detecta automáticamente)
    - **Root Directory:** `./` (dejar por defecto)
+   - **Project Name:** ⚠️ Solo letras, números y guiones bajos (_)
+     - ✅ Ejemplo válido: `solhana_proyect_client`
+     - ❌ NO uses: `solhana-proyect-client` (guión no permitido)
    - Haz clic en "Environment Variables"
 
 5. **Agrega las variables de entorno:**

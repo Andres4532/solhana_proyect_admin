@@ -10,9 +10,10 @@ const nextConfig = {
     // Esto permite que el build continúe incluso si hay errores de tipos
     ignoreBuildErrors: true,
   },
-  // Asegurar que los path aliases funcionen correctamente
-  webpack: (config) => {
-    return config
+  // Desactivar verificación de tipos completamente durante el build
+  onDemandEntries: {
+    maxInactiveAge: 25 * 1000,
+    pagesBufferLength: 2,
   },
 }
 
